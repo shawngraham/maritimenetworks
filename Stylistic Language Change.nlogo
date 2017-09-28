@@ -4,22 +4,22 @@ breed [nodes node]
 
 nodes-own [
   state            ;; current grammar state (ranges from 0 to 1)
-  orig-state       ;; each person's initially assigned grammar state 
+  orig-state       ;; each person's initially assigned grammar state
   spoken-state     ;; output of person's speech (0 or 1)
 ]
 
 ;;;
-;;; SETUP PROCEDURES  
+;;; SETUP PROCEDURES
 ;;;
 
 to setup
   clear-all
   set-default-shape nodes "circle"
   ask patches [ set pcolor gray ]
-  
+
 if network-type = "random-network"
   [nw:generate-random nodes links num-nodes 0.2 [ set color white set size 2 set state 0.0 ]
-   ask links [set color white] 
+   ask links [set color white]
 ;   distribute-grammars
    ]
 
@@ -27,7 +27,7 @@ if network-type ="preferential"
   [nw:generate-preferential-attachment nodes links num-nodes [ set color white set size 2 set state 0.0 ]
     ask links [set color white]  ;repeat num-nodes [ make-node ]
      ]
-  
+
 if network-type ="small-world"
   [nw:generate-small-world nodes links (num-nodes / 10) (num-nodes / 9) 2.0 false [ set color white set size 2 set state 0.0]
   ask links [set color white]
@@ -123,15 +123,15 @@ end
 
 to communicate-via [ algorithm ] ;; node procedure
   ;; Discrete Grammar ;;
-  ifelse (algorithm = "threshold") 
-  [ listen-threshold ] 
-  [ ifelse (algorithm = "individual") 
-    [ listen-individual ] 
+  ifelse (algorithm = "threshold")
+  [ listen-threshold ]
+  [ ifelse (algorithm = "individual")
+    [ listen-individual ]
     [ ;; Probabilistic Grammar ;;
       ;; speak and ask all neighbors to listen
-      if (algorithm = "reward") 
+      if (algorithm = "reward")
       [ speak
-        ask link-neighbors 
+        ask link-neighbors
         [ listen [spoken-state] of myself ]
    ]]]
 end
@@ -139,38 +139,38 @@ end
 ;; Speaking & Listening
 to listen-threshold ;; node procedure
   let grammar-one-sum sum [state] of link-neighbors
-  ifelse grammar-one-sum >= (count link-neighbors * threshold-val) 
+  ifelse grammar-one-sum >= (count link-neighbors * threshold-val)
   [ set state 1 ]
-  [ ;; if there are not enough neighbors with grammar 1, 
+  [ ;; if there are not enough neighbors with grammar 1,
     ;; and 1 is not a sink state, then change to 0
     if not sink-state-1? [ set state 0 ]
   ]
 end
 
-to listen-individual 
+to listen-individual
   set state [state] of one-of link-neighbors
 end
 
 to speak ;; node procedure
   ;; alpha is the level of bias in favor of grammar 1
-  ;; alpha is constant for all nodes. 
+  ;; alpha is constant for all nodes.
   ;; the alpha value of 0.025 works best with the logistic function
   ;; adjusted so that it takes input values [0,1] and output to [0,1]
-  if logistic? 
+  if logistic?
   [ let gain (alpha + 0.1) * 20
     let filter-val 1 / (1 + exp (- (gain * state - 1) * 5))
-    ifelse random-float 1.0 <= filter-val 
+    ifelse random-float 1.0 <= filter-val
     [ set spoken-state 1 ]
     [ set spoken-state 0 ]
   ]
   ;; for probabilistic learners who only have bias for grammar 1
   ;; no preference for discrete grammars (i.e., no logistic)
-  if not logistic? 
+  if not logistic?
   [ ;; the slope needs to be greater than 1, so we arbitrarily set to 1.5
     ;; when state is >= 2/3, the biased-val would be greater than or equal to 1
     let biased-val 1.5 * state
     if biased-val >= 1 [ set biased-val 1 ]
-    ifelse random-float 1.0 <= biased-val 
+    ifelse random-float 1.0 <= biased-val
     [ set spoken-state 1 ]
     [ set spoken-state 0 ]
   ]
@@ -180,15 +180,15 @@ end
 to listen [heard-state] ;; node procedure
   let gamma 0.01 ;; for now, gamma is the same for all nodes
   ;; choose a grammar state to be in
-  ifelse random-float 1.0 <= state 
+  ifelse random-float 1.0 <= state
   [
     ;; if grammar 1 was heard
-    ifelse heard-state = 1 
+    ifelse heard-state = 1
     [ set state state + (gamma * (1 - state)) ]
     [ set state (1 - gamma) * state ]
   ][
     ;; if grammar 0 was heard
-    ifelse heard-state = 0 
+    ifelse heard-state = 0
     [ set state state * (1 - gamma) ]
     [ set state gamma + state * (1 - gamma) ]
   ]
@@ -205,10 +205,10 @@ end
 to-report find-partner
   let pick random-float sum [count link-neighbors] of (nodes with [any? link-neighbors])
   let partner nobody
-  ask nodes 
+  ask nodes
   [ ;; if there's no winner yet
-    if partner = nobody 
-    [ ifelse count link-neighbors > pick 
+    if partner = nobody
+    [ ifelse count link-neighbors > pick
       [ set partner self]
       [ set pick pick - (count link-neighbors)]
     ]
@@ -217,7 +217,7 @@ to-report find-partner
 end
 
 to layout
-  layout-spring (turtles with [any? link-neighbors]) links 0.4 6 1
+  layout-spring (turtles with [any? link-neighbors]) links 0.1 9 1
 
 ;;;repeat 3 [
 ;;;    ;; the more turtles we have to fit into the same amount of space,
@@ -261,13 +261,13 @@ to do-highlight
   let highlight-color blue
   let min-d min [distancexy mouse-xcor mouse-ycor] of nodes
   ;; get the node closest to the mouse
-  let the-node one-of nodes with 
+  let the-node one-of nodes with
   [any? link-neighbors and distancexy mouse-xcor mouse-ycor = min-d]
   ;; get the node that was previously the highlight-color
   let highlighted-node one-of nodes with [color = highlight-color]
-  if the-node != nobody and the-node != highlighted-node 
+  if the-node != nobody and the-node != highlighted-node
   [ ;; highlight the chosen node
-    ask the-node 
+    ask the-node
     [ undo-highlight
       output-print word "original grammar state: "  orig-grammar-string
       output-print word "current grammar state: " precision state 5
@@ -289,7 +289,7 @@ to save-plots
   let part2 word part1 settings
   let name word part2 z
   export-all-plots name
-end  
+end
 
 
 
@@ -441,7 +441,7 @@ SLIDER
 num-nodes
 num-nodes
 2
-1000
+100
 100
 1
 1
@@ -514,7 +514,7 @@ threshold-val
 threshold-val
 0
 1
-0.9
+0.5
 0.05
 1
 NIL
@@ -538,7 +538,7 @@ SWITCH
 317
 logistic?
 logistic?
-1
+0
 1
 -1000
 
@@ -598,28 +598,6 @@ network-type
 network-type
 "preferential" "small-world"
 1
-
-MONITOR
-755
-315
-867
-360
-NIL
-count turtles
-17
-1
-11
-
-MONITOR
-750
-380
-817
-425
-NIL
-count links
-17
-1
-11
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -1007,7 +985,7 @@ Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 
 @#$#@#$#@
-NetLogo 5.1.0
+NetLogo 5.3.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
